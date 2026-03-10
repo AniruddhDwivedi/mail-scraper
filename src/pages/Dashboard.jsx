@@ -21,7 +21,7 @@ function Dashboard() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:3000/api/dashboard");
+      const res = await fetch("/api/dashboard");
       const data = await res.json();
 
       setEmails(data);
@@ -74,7 +74,7 @@ function Dashboard() {
                     variant="primary"
                     onClick={() =>
                       (window.location.href =
-                        "http://localhost:3000/auth/google")
+                        "/auth/google")
                     }
                   >
                     Connect Gmail

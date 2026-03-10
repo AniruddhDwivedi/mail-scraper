@@ -1,7 +1,8 @@
 import express from "express";
 import {
   syncEmails,
-  dashboard
+  dashboard,
+  getEmailBody
 } from "../controllers/email.controller.js";
 
 const router = express.Router();

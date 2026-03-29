@@ -1,4 +1,6 @@
 import { google } from "googleapis";
+import { fetchEmailsFromGmail } from "../services/gmail.service.js";
+import { syncEmails } from "../services/database.service.js";
 
 let oauth2Client = null;
 
@@ -46,15 +48,22 @@ export async function googleCallback(req, res) {
 
     const { code } = req.query;
 
-    const { tokens } = await client.getToken(code);
+    console.log("OAuth Code:", code);
+
+    const { tokens } =
+      await client.getToken(code);
+
+    console.log("Tokens:", tokens);
 
     client.setCredentials(tokens);
 
     console.log("✅ Gmail Connected");
 
     res.redirect("http://localhost:5173/dashboard");
+
   } catch (err) {
-    console.error(err);
+    console.error("OAuth Error:", err.response?.data || err);
+
     res.status(500).send("OAuth failed");
   }
 }

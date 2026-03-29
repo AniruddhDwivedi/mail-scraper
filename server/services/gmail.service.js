@@ -1,40 +1,40 @@
 import { google } from "googleapis";
 import { getOAuthClient } from "../config/googleAuth.js";
+import { parseEmail } from "../utils/emailParser.js";
 
 export async function fetchEmailsFromGmail() {
+
+  const auth = getOAuthClient();
+
   const gmail = google.gmail({
     version: "v1",
-    auth: oauth2Client
+    auth
   });
 
-  const list = await gmail.users.messages.list({
-    userId: "me",
-    maxResults: 20
-  });
+  const response =
+    await gmail.users.messages.list({
+      userId: "me",
+      maxResults: 20
+    });
 
-  const messages = list.data.messages || [];
+  const messages =
+    response.data.messages || [];
 
-  return Promise.all(
-    messages.map(async ({ id }) => {
-      const email = await gmail.users.messages.get({
+  const emails = [];
+
+  for (const msg of messages) {
+
+    const full =
+      await gmail.users.messages.get({
         userId: "me",
-        id,
-        format: "full"
+        id: msg.id
       });
 
-      const headers = email.data.payload.headers;
+    const parsed =
+      parseEmail(full.data);
 
-      return {
-        id,
-        thread_id: email.data.threadId,
-        sender:
-          headers.find(h => h.name === "From")?.value || "",
-        subject:
-          headers.find(h => h.name === "Subject")?.value || "",
-        snippet: email.data.snippet,
-        raw_payload: email.data.payload,
-        internal_date: email.data.internalDate
-      };
-    })
-  );
+    emails.push(parsed);
+  }
+
+  return emails;
 }

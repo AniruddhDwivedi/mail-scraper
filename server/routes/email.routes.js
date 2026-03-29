@@ -1,14 +1,25 @@
 import express from "express";
+
 import {
-  syncEmails,
+  syncEmailsController,
   dashboard,
-  getEmailBody
+  getEmailBody,
+  getStats,
+  searchBySender,
+  advancedSearch
 } from "../controllers/email.controller.js";
 
 const router = express.Router();
 
-router.get("/emails", syncEmails);
+router.get("/sync", syncEmailsController);
 router.get("/dashboard", dashboard);
 router.get("/email/:id", getEmailBody);
+router.get("/stats", getStats);
+router.get("/search", searchBySender);
+
+router.post(
+"/advanced",
+advancedSearch
+);
 
 export default router;

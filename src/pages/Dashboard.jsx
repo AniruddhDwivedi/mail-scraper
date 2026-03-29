@@ -9,6 +9,7 @@ import {
   Stack,
   Spinner
 } from "react-bootstrap";
+import "./Dashboard.css";
 
 function Dashboard() {
   const [darkMode, setDarkMode] = useState(() => {
@@ -17,19 +18,82 @@ function Dashboard() {
   const [emails, setEmails] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchDashboard = async () => {
-    setLoading(true);
+  const [expanded, setExpanded] = useState(false);
+  const [stats, setStats] = useState(null);
+  const [search, setSearch] = useState("");
+  const [results, setResults] = useState([]);
+  const [advanced, setAdvanced] = useState(false);
+  const [filters, setFilters] = useState({
+    senderFrequency: false,
+    recentSenders: false,
+    keyword: "",
+    startDate: "",
+    endDate: ""
+  });
 
+  const handleSearch = async () => {
+    const res = await fetch(
+      `http://localhost:3000/api/search?sender=${search}`
+    );
+
+    const data = await res.json();
+
+    setResults(data);
+  };
+
+  const loadStats = async () => {
     try {
-      const res = await fetch("/api/dashboard");
+      setLoading(true);
+
+      await fetch("http://localhost:3000/api/sync");
+
+      const res = await fetch("http://localhost:3000/api/stats");
+
+      if (!res.ok) {
+        throw new Error("Stats failed");
+      }
+
       const data = await res.json();
 
-      setEmails(data);
+      setStats(data);
+      setExpanded(true);
     } catch (err) {
       console.error(err);
     }
 
     setLoading(false);
+  };
+
+  const syncAndLoad = async () => {
+    setLoading(true);
+
+    try {
+      console.log("Syncing emails...");
+
+      await fetch("http://localhost:3000/api/sync");
+
+      console.log("Loading dashboard...");
+
+      await fetchDashboard();
+    } catch (err) {
+      console.error(err);
+    }
+
+    setLoading(false);
+  };
+
+  const fetchDashboard = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/api/dashboard");
+
+      const data = await res.json();
+
+      console.log("Server response:", data);
+
+      setEmails(data);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   useEffect(() => {
@@ -38,102 +102,180 @@ function Dashboard() {
   }, []);
 
   useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add("dark");
+    } else {
+      document.body.classList.remove("dark");
+    }
+  }, [darkMode]);
+  useEffect(() => {
     localStorage.setItem("theme", darkMode ? "dark" : "light");
   }, [darkMode]);
+  const handleAdvancedSearch = async () => {
+    const res = await fetch("http://localhost:3000/api/advanced", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(filters)
+    });
+
+    const data = await res.json();
+
+    setResults(data);
+  };
 
   return (
-    <div
-      className={
-        darkMode
-          ? "bg-dark text-light min-vh-100 p-4"
-          : "bg-light text-dark min-vh-100 p-4"
-      }
-    >
-      <Container className="mt-4">
-        {/* HEADER */}
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h1>Gmail Inbox Analytics</h1>
+    <>
+      <div className="app-header">
+        <div className="app-title">Gmail Inbox Analytics</div>
 
-          <button
-            className="btn btn-secondary"
-            onClick={() => setDarkMode(!darkMode)}
-          >
-            {darkMode ? "Light Mode ☀️" : "Dark Mode 🌙"}
+        <button className="dark-toggle" onClick={() => setDarkMode(!darkMode)}>
+          {darkMode ? "☀️" : "🌙"}
+        </button>
+      </div>
+
+      <div className="dashboard-container">
+        {/* Load Button */}
+
+        {!expanded && (
+          <button className="load-button" onClick={loadStats}>
+            {loading ? "Loading..." : "Load Mail"}
           </button>
-        </div>
+        )}
 
-        {/* ACTION PANEL */}
-        <Row className="mb-4">
-          <Col md={8}>
-            <Card>
-              <Card.Body>
-                <Card.Title>Controls</Card.Title>
+        {/* Dashboard Content */}
 
-                <Stack direction="horizontal" gap={3}>
-                  <Button
-                    variant="primary"
-                    onClick={() =>
-                      (window.location.href =
-                        "/auth/google")
-                    }
+        {expanded && (
+          <div className="content-container">
+            {/* Search Mode */}
+
+            {!advanced && (
+              <div className="search-row">
+                <input
+                  className="form-control"
+                  placeholder="Search sender..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                <br></br>
+                <button onClick={handleSearch}>Search</button>
+                <br></br>
+                <button onClick={() => setAdvanced(true)}>
+                  Advanced Search
+                </button>
+              </div>
+            )}
+
+            {/* Advanced Mode */}
+
+            {advanced && (
+              <>
+                <div className="advanced-header">
+                  <button
+                    className="back-button"
+                    onClick={() => setAdvanced(false)}
                   >
-                    Connect Gmail
-                  </Button>
+                    ← Back
+                  </button>
 
-                  <Button onClick={fetchDashboard} disabled={loading}>
-                    {loading ? "Loading..." : "Load Dashboard"}
-                  </Button>
-                </Stack>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
+                  <div className="advanced-title">Advanced Search</div>
+                </div>
 
-        {/* EMAIL DISPLAY */}
-        <Row>
-          <Col md={8}>
-            <Card>
-              <Card.Body>
-                <Card.Title>Email Results</Card.Title>
+                <div className="advanced-panel">
+                  <div className="filter-row">
+                    <label>
+                      <input
+                        type="checkbox"
+                        onChange={(e) =>
+                          setFilters({
+                            ...filters,
+                            senderFrequency: e.target.checked
+                          })
+                        }
+                      />
+                      Top Senders
+                    </label>
 
-                <ListGroup variant="flush">
-                  <hr />
-                  {loading ? (
-                    <div className="text-center mt-4">
-                      <Spinner animation="border" role="status">
-                        <span className="visually-hidden">Loading...</span>
-                      </Spinner>
+                    <label>
+                      <input
+                        type="checkbox"
+                        onChange={(e) =>
+                          setFilters({
+                            ...filters,
+                            recentSenders: e.target.checked
+                          })
+                        }
+                      />
+                      Recent Senders
+                    </label>
+                  </div>
+
+                  <div className="filter-row">
+                    <input
+                      className="form-control"
+                      placeholder="Subject keyword"
+                      onChange={(e) =>
+                        setFilters({
+                          ...filters,
+                          keyword: e.target.value
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="filter-row date-row">
+                    <input
+                      type="date"
+                      onChange={(e) =>
+                        setFilters({
+                          ...filters,
+                          startDate: e.target.value
+                        })
+                      }
+                    />
+
+                    <input
+                      type="date"
+                      onChange={(e) =>
+                        setFilters({
+                          ...filters,
+                          endDate: e.target.value
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="filter-row apply-row">
+                    <button onClick={handleAdvancedSearch}>
+                      Apply Filters
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Results */}
+
+            {results.length > 0 && (
+              <div className="email-container">
+                {results.map((mail) => (
+                  <div key={mail.id} className="email-card">
+                    <div className="email-header">{mail.sender}</div>
+
+                    <div className="email-body">
+                      <div className="email-subject">{mail.subject}</div>
+
+                      <div className="email-snippet">{mail.snippet}</div>
                     </div>
-                  ) : (
-                    emails.map((email) => (
-                      <div key={email.id}>
-                        <b>{email.sender}</b>
-                        <p>{email.subject}</p>
-                        <small>{email.snippet}</small>
-                        <hr />
-                      </div>
-                    ))
-                  )}
-
-                  {emails.length === 0 ? (
-                    <p>No emails loaded</p>
-                  ) : (
-                    emails.map((email) => (
-                      <div key={email.id}>
-                        <b>{email.sender}</b>
-                        <p>{email.subject}</p>
-                        <small>{email.snippet}</small>
-                        <hr />
-                      </div>
-                    ))
-                  )}
-                </ListGroup>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
-      </Container>
-    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 

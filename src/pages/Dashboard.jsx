@@ -42,20 +42,18 @@ function Dashboard() {
   };
 
   const loadStats = async () => {
+    setLoading(true);
+
     try {
-      setLoading(true);
+      const res = await fetch("http://localhost:3000/api/sync");
 
-      await fetch("http://localhost:3000/api/sync");
-
-      const res = await fetch("http://localhost:3000/api/stats");
-
-      if (!res.ok) {
-        throw new Error("Stats failed");
+      if (res.status === 401) {
+        window.location.href = "http://localhost:3000/auth/google";
+        return;
       }
 
       const data = await res.json();
 
-      setStats(data);
       setExpanded(true);
     } catch (err) {
       console.error(err);

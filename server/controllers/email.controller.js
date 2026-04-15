@@ -42,6 +42,13 @@ export async function syncEmailsController(req, res) {
 	} catch (err) {
 		console.error(err);
 
+		// Detect OAuth failure
+		if (err.message.includes("No access, refresh token")) {
+			return res.status(401).json({
+				error: "OAuth required"
+			});
+		}
+
 		res.status(500).json({
 			error: "Sync failed"
 		});
@@ -108,23 +115,17 @@ export async function getStats(req, res) {
 }
 
 export async function advancedSearch(req, res) {
+	try {
+		const filters = req.body;
 
-try {
+		const data = await advancedQuery(filters);
 
-const filters = req.body;
+		res.json(data);
+	} catch (err) {
+		console.error(err);
 
-const data =
-await advancedQuery(filters);
-
-res.json(data);
-
-} catch (err) {
-
-console.error(err);
-
-res.status(500).json({
-error: "Advanced search failed"
-});
-
-}
+		res.status(500).json({
+			error: "Advanced search failed"
+		});
+	}
 }

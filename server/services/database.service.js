@@ -8,8 +8,6 @@ export async function searchEmails(sender) {
     .select("sender")
     .limit(10);
 
-  console.log("Sample senders:", allData);
-
   const { data, error } = await supabase
     .from("emails")
     .select("*")
